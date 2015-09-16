@@ -139,6 +139,8 @@ if (isset($_REQUEST['p']) && preg_match("/^[a-z0-9_]*$/i", $_REQUEST['p']) && (i
     require_once realpath(__DIR__ . '/../includes/pages/dashboard.php');
     $title = getDashboardTitle();
     $content = get_dashboard();
+  } elseif ($p == "market") {
+    list($title, $content) = market();
   } else {
     require_once realpath(__DIR__ . '/../includes/pages/guest_start.php');
     $content = guest_start();
