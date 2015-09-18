@@ -5,7 +5,6 @@ function shifts_title()
     return _("Shifts");
 }
 
-
 /**
  * @param $shiftId
  *
@@ -497,12 +496,15 @@ function view_user_shifts()
         redirect('?');
     }
 
-    if (in_array('user_shifts_admin', $privileges))
+    if (in_array('user_shifts_admin', $privileges)) {
         $types = sql_select("SELECT `id`, `name` FROM `AngelTypes` ORDER BY `AngelTypes`.`name`");
-    else
+    } else {
         $types = sql_select("SELECT `AngelTypes`.`id`, `AngelTypes`.`name`, (`AngelTypes`.`restricted`=0 OR (NOT `UserAngelTypes`.`confirm_user_id` IS NULL OR `UserAngelTypes`.`id` IS NULL)) as `enabled` FROM `AngelTypes` LEFT JOIN `UserAngelTypes` ON (`UserAngelTypes`.`angeltype_id`=`AngelTypes`.`id` AND `UserAngelTypes`.`user_id`='" . sql_escape($user['UID']) . "') ORDER BY `AngelTypes`.`name`");
-    if (empty($types))
+    }
+
+    if (empty($types)) {
         $types = sql_select("SELECT `id`, `name` FROM `AngelTypes` WHERE `restricted` = 0");
+    }
     $filled = array(
         array(
             'id' => '1',
@@ -519,117 +521,139 @@ function view_user_shifts()
         redirect('?');
     }
 
-    if (!isset($_SESSION['user_shifts']))
+    if (!isset($_SESSION['user_shifts'])) {
         $_SESSION['user_shifts'] = array();
+    }
 
     if (!isset($_SESSION['user_shifts']['filled'])) {
         // User shift admins see free and occupied shifts by default
-        $_SESSION['user_shifts']['filled'] = in_array('user_shifts_admin', $privileges) ? [
-            0,
-            1
-        ] : [
-            0
-        ];
+        $_SESSION['user_shifts']['filled'] = in_array('user_shifts_admin', $privileges) ? [0, 1] : [0];
     }
 
-    foreach (array(
-                 'rooms',
-                 'types',
-                 'filled'
-             ) as $key) {
-        if (isset($_REQUEST[$key])) {
-            $filtered = array_filter($_REQUEST[$key], 'is_numeric');
-            if (!empty($filtered))
+    $keys = array('rooms', 'types', 'filled');
+    foreach ($keys as $key) {
+        if (hasRequestKey($key)) {
+            $filtered = array_filter(requestGetByKey($key), 'is_numeric');
+            if (!empty($filtered)) {
                 $_SESSION['user_shifts'][$key] = $filtered;
+            }
             unset($filtered);
         }
-        if (!isset($_SESSION['user_shifts'][$key]))
+        if (!isset($_SESSION['user_shifts'][$key])) {
             $_SESSION['user_shifts'][$key] = array_map(function ($array) {
                 return $array["id"];
             }, $$key);
+        }
     }
 
-    if (isset($_REQUEST['rooms'])) {
-        if (isset($_REQUEST['new_style']))
-            $_SESSION['user_shifts']['new_style'] = true;
-        else
-            $_SESSION['user_shifts']['new_style'] = false;
+    if (hasRequestKey('rooms')) {
+        $_SESSION['user_shifts']['new_style'] = hasRequestKey('new_style');
     }
-    if (!isset($_SESSION['user_shifts']['new_style']))
+    if (!isset($_SESSION['user_shifts']['new_style'])) {
         $_SESSION['user_shifts']['new_style'] = true;
-    foreach (array(
-                 'start',
-                 'end'
-             ) as $key) {
-        if (isset($_REQUEST[$key . '_day']) && in_array($_REQUEST[$key . '_day'], $days))
-            $_SESSION['user_shifts'][$key . '_day'] = $_REQUEST[$key . '_day'];
-        if (isset($_REQUEST[$key . '_time']) && preg_match('#^\d{1,2}:\d\d$#', $_REQUEST[$key . '_time']))
-            $_SESSION['user_shifts'][$key . '_time'] = $_REQUEST[$key . '_time'];
+    }
+    $keys = array( 'start', 'end');
+    foreach ($keys as $key) {
+        $dayKey = $key . '_day';
+        if (hasRequestKey($dayKey) && in_array(requestGetByKey($dayKey), $days)) {
+            $_SESSION['user_shifts'][$dayKey] = requestGetByKey($dayKey);
+        }
+        $timeKey = $key . '_time';
+        if (hasRequestKey($timeKey) && preg_match('#^\d{1,2}:\d\d$#', requestGetByKey($timeKey))) {
+            $_SESSION['user_shifts'][$timeKey] = requestGetByKey($timeKey);
+        }
         if (!isset($_SESSION['user_shifts'][$key . '_day'])) {
             $time = date('Y-m-d', time() + ($key == 'end' ? 24 * 60 * 60 : 0));
             $_SESSION['user_shifts'][$key . '_day'] = in_array($time, $days) ? $time : ($key == 'end' ? max($days) : min($days));
         }
-        if (!isset($_SESSION['user_shifts'][$key . '_time']))
+        if (!isset($_SESSION['user_shifts'][$key . '_time'])) {
             $_SESSION['user_shifts'][$key . '_time'] = date('H:i');
+        }
     }
-    if ($_SESSION['user_shifts']['start_day'] > $_SESSION['user_shifts']['end_day'])
+
+    if ($_SESSION['user_shifts']['start_day'] > $_SESSION['user_shifts']['end_day']) {
         $_SESSION['user_shifts']['end_day'] = $_SESSION['user_shifts']['start_day'];
-    if ($_SESSION['user_shifts']['start_day'] == $_SESSION['user_shifts']['end_day'] && $_SESSION['user_shifts']['start_time'] >= $_SESSION['user_shifts']['end_time'])
+    }
+    if ($_SESSION['user_shifts']['start_day'] == $_SESSION['user_shifts']['end_day']
+        && $_SESSION['user_shifts']['start_time'] >= $_SESSION['user_shifts']['end_time']
+    ) {
         $_SESSION['user_shifts']['end_time'] = '23:59';
+    }
 
     if (isset($_SESSION['user_shifts']['start_day'])) {
-        $starttime = DateTime::createFromFormat("Y-m-d H:i", $_SESSION['user_shifts']['start_day'] . $_SESSION['user_shifts']['start_time']);
-        $starttime = $starttime->getTimestamp();
-    } else
-        $starttime = now();
+        $startTime = DateTime::createFromFormat("Y-m-d H:i", $_SESSION['user_shifts']['start_day'] . $_SESSION['user_shifts']['start_time']);
+        $startTime = $startTime->getTimestamp();
+    } else {
+        $startTime = now();
+    }
 
     if (isset($_SESSION['user_shifts']['end_day'])) {
-        $endtime = DateTime::createFromFormat("Y-m-d H:i", $_SESSION['user_shifts']['end_day'] . $_SESSION['user_shifts']['end_time']);
-        $endtime = $endtime->getTimestamp();
-    } else
-        $endtime = now() + 24 * 60 * 60;
+        $endTime = DateTime::createFromFormat("Y-m-d H:i", $_SESSION['user_shifts']['end_day'] . $_SESSION['user_shifts']['end_time']);
+        $endTime = $endTime->getTimestamp();
+    } else {
+        $endTime = now() + 24 * 60 * 60;
+    }
 
-    if (!isset($_SESSION['user_shifts']['rooms']) || count($_SESSION['user_shifts']['rooms']) == 0)
-        $_SESSION['user_shifts']['rooms'] = array(
-            0
-        );
+    if (!isset($_SESSION['user_shifts']['rooms']) || count($_SESSION['user_shifts']['rooms']) == 0) {
+        $_SESSION['user_shifts']['rooms'] = array(0);
+    }
 
-    $SQL = "SELECT DISTINCT `Shifts`.*, `ShiftTypes`.`name`, `Room`.`Name` as `room_name`, nat2.`special_needs` > 0 AS 'has_special_needs'
-  FROM `Shifts`
-  INNER JOIN `Room` USING (`RID`)
-  INNER JOIN `ShiftTypes` ON (`ShiftTypes`.`id` = `Shifts`.`shifttype_id`)
-  LEFT JOIN (SELECT COUNT(*) AS special_needs , nat3.`shift_id` FROM `NeededAngelTypes` AS nat3 WHERE `shift_id` IS NOT NULL GROUP BY nat3.`shift_id`) AS nat2 ON nat2.`shift_id` = `Shifts`.`SID`
-  INNER JOIN `NeededAngelTypes` AS nat ON nat.`count` != 0 AND nat.`angel_type_id` IN (" . implode(',', $_SESSION['user_shifts']['types']) . ") AND ((nat2.`special_needs` > 0 AND nat.`shift_id` = `Shifts`.`SID`) OR ((nat2.`special_needs` = 0 OR nat2.`special_needs` IS NULL) AND nat.`room_id` = `RID`))
-  LEFT JOIN (SELECT se.`SID`, se.`TID`, COUNT(*) as count FROM `ShiftEntry` AS se GROUP BY se.`SID`, se.`TID`) AS entries ON entries.`SID` = `Shifts`.`SID` AND entries.`TID` = nat.`angel_type_id`
-  WHERE `Shifts`.`RID` IN (" . implode(',', $_SESSION['user_shifts']['rooms']) . ")
-  AND `start` BETWEEN " . $starttime . " AND " . $endtime;
+    $SQL = sprintf(
+        "SELECT DISTINCT `Shifts`.*, `ShiftTypes`.`name`, `Room`.`Name` as `room_name`, nat2.`special_needs` > 0 AS 'has_special_needs'
+        FROM `Shifts`
+        INNER JOIN `Room` USING (`RID`)
+        INNER JOIN `ShiftTypes` ON (`ShiftTypes`.`id` = `Shifts`.`shifttype_id`)
+        LEFT JOIN (SELECT COUNT(*) AS special_needs , nat3.`shift_id` FROM `NeededAngelTypes` AS nat3 WHERE `shift_id` IS NOT NULL GROUP BY nat3.`shift_id`) AS nat2 ON nat2.`shift_id` = `Shifts`.`SID`
+        INNER JOIN `NeededAngelTypes` AS nat ON nat.`count` != 0
+        AND nat.`angel_type_id` IN (%s) AND ((nat2.`special_needs` > 0
+        AND nat.`shift_id` = `Shifts`.`SID`) OR ((nat2.`special_needs` = 0 OR nat2.`special_needs` IS NULL)
+        AND nat.`room_id` = `RID`))
+        LEFT JOIN
+        (SELECT se.`SID`, se.`TID`, COUNT(*) as count FROM `ShiftEntry` AS se GROUP BY se.`SID`, se.`TID`) AS entries
+        ON entries.`SID` = `Shifts`.`SID` AND entries.`TID` = nat.`angel_type_id`
+        WHERE `Shifts`.`RID` IN (%s)
+        AND `start` BETWEEN %s AND %s",
+        implode(',', $_SESSION['user_shifts']['types']),
+        implode(',', $_SESSION['user_shifts']['rooms']),
+        $startTime,
+        $endTime
+    );
 
     if (count($_SESSION['user_shifts']['filled']) == 1) {
-        if ($_SESSION['user_shifts']['filled'][0] == 0)
+        if ($_SESSION['user_shifts']['filled'][0] == 0) {
             $SQL .= "
-      AND (nat.`count` > entries.`count` OR entries.`count` IS NULL OR EXISTS (SELECT `SID` FROM `ShiftEntry` WHERE `UID` = '" . sql_escape($user['UID']) . "' AND `ShiftEntry`.`SID` = `Shifts`.`SID`))";
-        elseif ($_SESSION['user_shifts']['filled'][0] == 1)
+                AND (nat.`count` > entries.`count` OR entries.`count` IS NULL OR EXISTS (SELECT `SID` FROM `ShiftEntry` WHERE `UID` = '" . sql_escape($user['UID']) . "' AND `ShiftEntry`.`SID` = `Shifts`.`SID`))";
+        } elseif ($_SESSION['user_shifts']['filled'][0] == 1) {
             $SQL .= "
-    AND (nat.`count` <= entries.`count`  OR EXISTS (SELECT `SID` FROM `ShiftEntry` WHERE `UID` = '" . sql_escape($user['UID']) . "' AND `ShiftEntry`.`SID` = `Shifts`.`SID`))";
+                AND (nat.`count` <= entries.`count`  OR EXISTS (SELECT `SID` FROM `ShiftEntry` WHERE `UID` = '" . sql_escape($user['UID']) . "' AND `ShiftEntry`.`SID` = `Shifts`.`SID`))";
+        }
     }
-    $SQL .= "
-  ORDER BY `start`";
+    $SQL .= "ORDER BY `start`";
 
     $shifts = sql_select($SQL);
 
-    $ownshifts_source = sql_select("
-      SELECT `ShiftTypes`.`name`, `Shifts`.*
-      FROM `Shifts`
-      INNER JOIN `ShiftTypes` ON (`ShiftTypes`.`id` = `Shifts`.`shifttype_id`)
-      INNER JOIN `ShiftEntry` ON (`Shifts`.`SID` = `ShiftEntry`.`SID` AND `ShiftEntry`.`UID` = '" . sql_escape($user['UID']) . "')
-      WHERE `Shifts`.`RID` IN (" . implode(',', $_SESSION['user_shifts']['rooms']) . ")
-      AND `start` BETWEEN " . $starttime . " AND " . $endtime);
+    $ownShiftsSource = sql_select(
+        sprintf(
+            "SELECT `ShiftTypes`.`name`, `Shifts`.*
+            FROM `Shifts`
+            INNER JOIN `ShiftTypes` ON (`ShiftTypes`.`id` = `Shifts`.`shifttype_id`)
+            INNER JOIN `ShiftEntry` ON (`Shifts`.`SID` = `ShiftEntry`.`SID` AND `ShiftEntry`.`UID` = '%s')
+            WHERE `Shifts`.`RID` IN (%s)
+            AND `start` BETWEEN %s AND %s",
+            sql_escape($user['UID']),
+            implode(',', $_SESSION['user_shifts']['rooms']),
+            $startTime,
+            $endTime
+        )
+    );
     $ownShifts = array();
-    foreach ($ownshifts_source as $ownshift)
+    foreach ($ownShiftsSource as $ownshift) {
         $ownShifts[$ownshift['SID']] = $ownshift;
-    unset($ownshifts_source);
+    }
+    unset($ownShiftsSource);
 
     $shiftsTable = "";
+
     /*
      * [0] => Array (
      *    [SID] => 1,
@@ -645,8 +669,8 @@ function view_user_shifts()
      * )
      */
     if ($_SESSION['user_shifts']['new_style']) {
-        $first = 15 * 60 * floor($starttime / (15 * 60));
-        $maxshow = ceil(($endtime - $first) / (60 * 15));
+        $first = 15 * 60 * floor($startTime / (15 * 60));
+        $maxshow = ceil(($endTime - $first) / (60 * 15));
         $block = array();
         $todo = array();
         $myRooms = $rooms;
@@ -698,7 +722,7 @@ function view_user_shifts()
         $shiftsTable .= "</tr></thead><tbody>";
         for ($i = 0; $i < $maxshow; $i++) {
             $thistime = $first + ($i * 15 * 60);
-            if ($thistime % (24 * 60 * 60) == 23 * 60 * 60 && $endtime - $starttime > 24 * 60 * 60) {
+            if ($thistime % (24 * 60 * 60) == 23 * 60 * 60 && $endTime - $startTime > 24 * 60 * 60) {
                 $shiftsTable .= "<tr class=\"row-day\"><th class=\"row-header\">";
                 $shiftsTable .= date('Y-m-d<b\r />H:i', $thistime);
             } elseif ($thistime % (60 * 60) == 0) {
@@ -975,8 +999,9 @@ function view_user_shifts()
         ), $shiftsTable);
     }
 
-    if ($user['api_key'] == "")
+    if ($user['api_key'] == "") {
         User_reset_api_key($user, false);
+    }
 
     return page(array(
         '<div class="col-md-12">',
@@ -1006,23 +1031,31 @@ function make_user_shifts_export_link($page, $key)
     $link = "&start_time=" . $_SESSION['user_shifts']['start_time'];
     $link = "&end_day=" . $_SESSION['user_shifts']['end_day'];
     $link = "&end_time=" . $_SESSION['user_shifts']['end_time'];
-    foreach ($_SESSION['user_shifts']['rooms'] as $room)
+    foreach ($_SESSION['user_shifts']['rooms'] as $room) {
         $link .= '&rooms[]=' . $room;
-    foreach ($_SESSION['user_shifts']['types'] as $type)
+    }
+    foreach ($_SESSION['user_shifts']['types'] as $type) {
         $link .= '&types[]=' . $type;
-    foreach ($_SESSION['user_shifts']['filled'] as $filled)
+    }
+    foreach ($_SESSION['user_shifts']['filled'] as $filled) {
         $link .= '&filled[]=' . $filled;
+    }
+
     return page_link_to_absolute($page) . $link . '&export=user_shifts&key=' . $key;
 }
 
-function get_ids_from_array($array)
-{
-    return $array["id"];
-}
-
+/**
+ * Creates a special select list for the filters.
+ *
+ * @param $items
+ * @param $selected
+ * @param string $name
+ * @param null $title
+ *
+ * @return string
+ */
 function make_select($items, $selected, $name, $title = null)
 {
-
     $html = "";
     if (isset($title)) {
         $html .= '<h4 style="margin-top: 41px;">';
@@ -1057,4 +1090,3 @@ function make_select($items, $selected, $name, $title = null)
 
     return $html;
 }
-
