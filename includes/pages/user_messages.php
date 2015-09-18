@@ -31,10 +31,10 @@ function user_messages() {
 
     $messages = sql_select("SELECT * FROM `Messages` WHERE `SUID`='" . sql_escape($user['UID']) . "' OR `RUID`='" . sql_escape($user['UID']) . "' ORDER BY `isRead`,`Datum` DESC");
     foreach ($messages as $message) {
-      $sender_user_source = User($message['SUID']);
+      $sender_user_source = findUserById($message['SUID']);
       if ($sender_user_source === false)
         engelsystem_error(_("Unable to load user."));
-      $receiver_user_source = User($message['RUID']);
+      $receiver_user_source = findUserById($message['RUID']);
       if ($receiver_user_source === false)
         engelsystem_error(_("Unable to load user."));
 

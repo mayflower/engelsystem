@@ -22,10 +22,10 @@ function ShiftEntries_by_shift($shift_id) {
 /**
  * Create a new shift entry.
  *
- * @param ShiftEntry $shift_entry          
+ * @param ShiftEntry $shift_entry
  */
 function ShiftEntry_create($shift_entry) {
-  mail_shift_assign(User($shift_entry['UID']), Shift($shift_entry['SID']));
+  mail_shift_assign(findUserById($shift_entry['UID']), findShift($shift_entry['SID']));
   return sql_query("INSERT INTO `ShiftEntry` SET
       `SID`='" . sql_escape($shift_entry['SID']) . "',
       `TID`='" . sql_escape($shift_entry['TID']) . "',
@@ -63,14 +63,14 @@ function ShiftEntry($shift_entry_id) {
  */
 function ShiftEntry_delete($shift_entry_id) {
   $shift_entry = ShiftEntry($shift_entry_id);
-  mail_shift_removed(User($shift_entry['UID']), Shift($shift_entry['SID']));
+  mail_shift_removed(findUserById($shift_entry['UID']), findShift($shift_entry['SID']));
   return sql_query("DELETE FROM `ShiftEntry` WHERE `id`='" . sql_escape($shift_entry_id) . "'");
 }
 
 /**
  * Returns next (or current) shifts of given user.
  *
- * @param User $user          
+ * @param User $user
  */
 function ShiftEntries_upcoming_for_user($user) {
   return sql_select("
@@ -87,8 +87,8 @@ function ShiftEntries_upcoming_for_user($user) {
 /**
  * Returns all shift entries in given shift for given angeltype.
  *
- * @param int $shift_id          
- * @param int $angeltype_id          
+ * @param int $shift_id
+ * @param int $angeltype_id
  */
 function ShiftEntries_by_shift_and_angeltype($shift_id, $angeltype_id) {
   return sql_select("
@@ -109,4 +109,22 @@ function ShiftEntries_freeloaded_by_user($user) {
       AND `UID`=" . sql_escape($user['UID']));
 }
 
-?>
+/**
+ * Creates a complete shift entry source.
+ *
+ * @param $id
+ * @return Result|array
+ */
+function getShiftEntrySourceById($id)
+{
+    return sql_select("
+        SELECT `User`.`Nick`, `ShiftEntry`.`Comment`, `ShiftEntry`.`UID`, `ShiftTypes`.`name`, `Shifts`.*, `Room`.`Name`, `AngelTypes`.`name` as `angel_type`
+        FROM `ShiftEntry`
+        JOIN `User` ON (`User`.`UID`=`ShiftEntry`.`UID`)
+        JOIN `AngelTypes` ON (`ShiftEntry`.`TID` = `AngelTypes`.`id`)
+        JOIN `Shifts` ON (`ShiftEntry`.`SID` = `Shifts`.`SID`)
+        JOIN `ShiftTypes` ON (`ShiftTypes`.`id` = `Shifts`.`shifttype_id`)
+        JOIN `Room` ON (`Shifts`.`RID` = `Room`.`RID`)
+        WHERE `ShiftEntry`.`id`='" . sql_escape($id) . "'");
+}
+

@@ -57,7 +57,7 @@ function display_news($news) {
 
   $html .= '<span class="glyphicon glyphicon-time"></span> ' . date("Y-m-d H:i", $news['Datum']) . '&emsp;';
 
-  $user_source = User($news['UID']);
+  $user_source = findUserById($news['UID']);
   if ($user_source === false)
     engelsystem_error(_("Unable to load user."));
 
@@ -87,7 +87,7 @@ function user_news_comments() {
 
     $comments = sql_select("SELECT * FROM `NewsComments` WHERE `Refid`='" . sql_escape($nid) . "' ORDER BY 'ID'");
     foreach ($comments as $comment) {
-      $user_source = User($comment['UID']);
+      $user_source = findUserById($comment['UID']);
       if ($user_source === false)
         engelsystem_error(_("Unable to load user."));
 

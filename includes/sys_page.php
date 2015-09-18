@@ -46,4 +46,23 @@ function check_email($email) {
   return (bool) filter_var($email, FILTER_VALIDATE_EMAIL);
 }
 
-?>
+/**
+ * Verifies whether a key exists on request or not.
+ *
+ * @param $key
+ * @return bool
+ */
+function hasRequestKey($key)
+{
+  return isset($_REQUEST[$key]);
+}
+
+/**
+ * Directly fetch from $_REQUEST by a key
+ * @param $key
+ * @return mixed
+ */
+function requestGetByKey($key)
+{
+  return $_REQUEST[$key];
+}

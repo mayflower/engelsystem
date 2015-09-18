@@ -20,10 +20,10 @@ function Room_delete($room_id) {
  */
 function Room_create($name, $from_frab, $public) {
   $result = sql_query("
-      INSERT INTO `Room` SET 
-      `Name`='" . sql_escape($name) . "', 
-      `FromPentabarf`='" . sql_escape($from_frab ? 'Y' : 'N') . "', 
-      `show`='" . sql_escape($public ? 'Y' : 'N') . "', 
+      INSERT INTO `Room` SET
+      `Name`='" . sql_escape($name) . "',
+      `FromPentabarf`='" . sql_escape($from_frab ? 'Y' : 'N') . "',
+      `show`='" . sql_escape($public ? 'Y' : 'N') . "',
       `Number`=0");
   if ($result === false)
     return false;
@@ -33,11 +33,11 @@ function Room_create($name, $from_frab, $public) {
 /**
  * Returns room by id.
  *
- * @param $id RID          
+ * @param $id RID
  */
 function Room($id) {
   $room_source = sql_select("SELECT * FROM `Room` WHERE `RID`='" . sql_escape($id) . "' AND `show` = 'Y'");
-  
+
   if ($room_source === false)
     return false;
   if (count($room_source) > 0)
@@ -45,4 +45,12 @@ function Room($id) {
   return null;
 }
 
-?>
+/**
+ * Creates a list of all active rooms.
+ *
+ * @return Result|array
+ */
+function activeRooms()
+{
+    return sql_select("SELECT * FROM `Room` WHERE `show`='Y' ORDER BY `Name`");
+}

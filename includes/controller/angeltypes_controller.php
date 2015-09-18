@@ -57,7 +57,7 @@ function angeltype_delete_controller() {
   if (! in_array('admin_angel_types', $privileges))
     redirect(page_link_to('angeltypes'));
 
-  $angeltype = AngelType($_REQUEST['angeltype_id']);
+  $angeltype = findAngelTypeById($_REQUEST['angeltype_id']);
   if ($angeltype === false)
     engelsystem_error("Unable to load angeltype.");
   if ($angeltype == null)
@@ -90,7 +90,7 @@ function angeltype_edit_controller() {
   $description = "";
 
   if (isset($_REQUEST['angeltype_id'])) {
-    $angeltype = AngelType($_REQUEST['angeltype_id']);
+    $angeltype = findAngelTypeById($_REQUEST['angeltype_id']);
     if ($angeltype === false)
       engelsystem_error("Unable to load angeltype.");
     if ($angeltype == null)
@@ -166,7 +166,7 @@ function angeltype_controller() {
   if (! isset($_REQUEST['angeltype_id']))
     redirect(page_link_to('angeltypes'));
 
-  $angeltype = AngelType($_REQUEST['angeltype_id']);
+  $angeltype = findAngelTypeById($_REQUEST['angeltype_id']);
   if ($angeltype === false)
     engelsystem_error("Unable to load angeltype.");
   if ($angeltype == null)
