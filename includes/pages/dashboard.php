@@ -361,7 +361,6 @@ function countHoursToBeWorked($shifts)
     $currentTime = time();
 
     foreach ($shiftWithNeededAngels as $shift) {
-        $ids[] = $shift['SID'];
         $diff = 0;
         if ($shift['start'] >= $currentTime) {
             // has not started yet
