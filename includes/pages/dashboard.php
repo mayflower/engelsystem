@@ -112,10 +112,15 @@ function getListUpcomingShifts($shifts, $withinSeconds)
  *
  * @return array
  */
-function getUpcomingShifts($shifts, $withinSeconds)
+function getUpcomingShifts($shifts, $withinSeconds = false)
 {
     return array_filter($shifts, function ($shift) use ($withinSeconds) {
         $currentTime = time();
+
+        if (!$withinSeconds) {
+            // just use all upcoming
+            return $shift['start'] > $currentTime || $shift['end'] > $currentTime;
+        }
 
         return $shift['start'] > $currentTime && $shift['start'] <= ($currentTime + $withinSeconds);
     });
@@ -320,18 +325,53 @@ function getCurrentlyWorkingAngels()
  */
 function countHoursToBeWorked($shifts)
 {
+    $upcomingShifts = getUpcomingShifts($shifts);
+    $ids = array();
+    foreach ($upcomingShifts as $shift) {
+        $ids[] = $shift['SID'];
+    }
+    if (count($ids) === 0) {
+        return 0;
+    }
+
+    $shiftWithNeededAngels = sql_select(
+        sprintf(
+            "SELECT
+                '1' as grouping,
+                s.SID,
+                s.start,
+                s.end,
+                SUM(nat.count) as countAngels
+            FROM Shifts s
+            INNER JOIN NeededAngelTypes nat
+                ON s.SID = nat.shift_id
+            LEFT JOIN ShiftEntry se
+                ON se.SID = s.SID
+            WHERE s.SID IN ('%s')
+            GROUP BY s.SID;",
+            implode("', '", $ids)
+        )
+    );
+
+    if (!$shiftWithNeededAngels) {
+        return 0;
+    }
+
     $seconds = 0;
     $currentTime = time();
 
-    foreach ($shifts as $shift) {
+    foreach ($shiftWithNeededAngels as $shift) {
+        $ids[] = $shift['SID'];
+        $diff = 0;
         if ($shift['start'] >= $currentTime) {
             // has not started yet
             $diff = $shift['end'] - $shift['start'];
-            $seconds += $diff > 0 ? $diff : 0;
         } elseif ($shift['end'] >= $currentTime && $shift['start'] <= $currentTime) {
             // shift has started, so just use the time until the end
-            $seconds += $shift['end'] - $currentTime;
+            $diff = $shift['end'] - $currentTime;
         }
+
+        $seconds += $diff > 0 ? $diff*$shift['countAngels'] : 0;
     }
 
     return round($seconds/60/60, 0);
