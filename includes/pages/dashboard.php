@@ -337,7 +337,6 @@ function countHoursToBeWorked($shifts)
     $shiftWithNeededAngels = sql_select(
         sprintf(
             "SELECT
-                '1' as grouping,
                 s.SID,
                 s.start,
                 s.end,
@@ -345,8 +344,6 @@ function countHoursToBeWorked($shifts)
             FROM Shifts s
             INNER JOIN NeededAngelTypes nat
                 ON s.SID = nat.shift_id
-            LEFT JOIN ShiftEntry se
-                ON se.SID = s.SID
             WHERE s.SID IN ('%s')
             GROUP BY s.SID;",
             implode("', '", $ids)
