@@ -18,13 +18,10 @@ function Room_delete($room_id) {
  * @param boolean $public
  *          Is the room visible for angels?
  */
-function Room_create($name, $from_frab, $public, $location, $lat, $long) {
+function Room_create($name, $from_frab, $public) {
   $result = sql_query("
       INSERT INTO `Room` SET
       `Name`='" . sql_escape($name) . "',
-      `location`='" . sql_escape($location) . "',
-      `lat`='" . sql_escape($lat) . "',
-      `long`='" . sql_escape($long) . "',
       `FromPentabarf`='" . ($from_frab ? 'Y' : 'N') . "',
       `show`='" . ($public ? 'Y' : 'N') . "',
       `Number`=0");

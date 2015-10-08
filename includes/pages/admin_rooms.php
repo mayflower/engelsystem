@@ -26,9 +26,6 @@ function admin_rooms()
     if (isset($_REQUEST['show'])) {
         $msg = "";
         $name = "";
-        $location = "";
-        $lat = "";
-        $long = "";
         $from_pentabarf = "";
         $public = 'Y';
         $number = "";
@@ -46,9 +43,6 @@ function admin_rooms()
             if (count($room) > 0) {
                 $id = $_REQUEST['id'];
                 $name = $room[0]['Name'];
-                $location = $room[0]['location'];
-                $lat = $room[0]['lat'];
-                $long = $room[0]['long'];
                 $from_pentabarf = $room[0]['FromPentabarf'];
                 $public = $room[0]['show'];
                 $needed_angeltypes = sql_select("SELECT * FROM `NeededAngelTypes` WHERE `room_id`='" . sql_escape($id) . "'");
@@ -67,21 +61,6 @@ function admin_rooms()
                 } else {
                     $ok = false;
                     $msg .= error(_("Please enter a name."), true);
-                }
-
-                if (isset($_REQUEST['location']) && strlen(strip_request_item('location')) > 0) {
-                    $location = strip_request_item('location');
-                } else {
-                    $ok = false;
-                    $msg .= error(_("Please enter a location."));
-                }
-
-                if (isset($_REQUEST['lat']) && isset($_REQUEST['long'])) {
-                    $lat = $_REQUEST['lat'];
-                    $long = $_REQUEST['long'];
-                } else {
-                    $ok = false;
-                    $msg .= error(_("Please enter a location - no lat long values found."));
                 }
 
                 $from_pentabarf = isset($_REQUEST['from_pentabarf']) ? 'Y' : '';
@@ -105,20 +84,17 @@ function admin_rooms()
                     if (isset($id)) {
                         sql_query(
                             sprintf(
-                                "UPDATE `Room` SET `Name`='%s', `FromPentabarf`='%s', `show`='%s', `Number`='%s', `location` = '%s', `lat` = '%s', `long` = '%s' WHERE `RID`='%s' LIMIT 1",
+                                "UPDATE `Room` SET `Name`='%s', `FromPentabarf`='%s', `show`='%s', `Number`='%s' WHERE `RID`='%s' LIMIT 1",
                                 sql_escape($name),
                                 sql_escape($from_pentabarf),
                                 sql_escape($public),
                                 sql_escape($number),
-                                sql_escape($location),
-                                sql_escape($lat),
-                                sql_escape($long),
                                 sql_escape($id)
                             )
                         );
                         engelsystem_log("Location updated: " . $name . ", pentabarf import: " . $from_pentabarf . ", public: " . $public . ", number: " . $number);
                     } else {
-                        $id = Room_create($name, $from_pentabarf, $public, $location, $lat, $long);
+                        $id = Room_create($name, $from_pentabarf, $public);
                         if ($id === false)
                             engelsystem_error("Unable to create location.");
                         engelsystem_log("Location created: " . $name . ", pentabarf import: " . $from_pentabarf . ", public: " . $public . ", number: " . $number);
@@ -157,9 +133,6 @@ function admin_rooms()
 
             $form_elements = [];
             $form_elements[] = form_text('name', _("Name"), $name);
-            $form_elements[] = form_text('location', _("Location"), $location);
-            $form_elements[] = form_text('lat', _("Latitude"), $lat, false, true);
-            $form_elements[] = form_text('long', _("Longitude"), $long, false, true);
             if ($enable_frab_import) {
                 $form_elements[] = form_checkbox('from_pentabarf', _("Frab import"), $from_pentabarf);
             }
@@ -182,33 +155,6 @@ function admin_rooms()
                                 join($angeltypes_count_form)
                             ))
                         )),
-                        script("
-                            jQuery(function ($) {
-                                var input = $(\"input[id='form_location']\");
-                                var inputElement = document.getElementById(input.attr('id'));
-                                var searchBox = new google.maps.places.SearchBox(inputElement);
-                                searchBox.addListener('places_changed', function() {
-                                    var places = searchBox.getPlaces();
-                                    if (places.length == 0) {
-                                      return;
-                                    }
-
-                                    var place = places.pop();
-                                    var lat = place.geometry.location.lat();
-                                    var long = place.geometry.location.lng();
-
-                                    $(\"input[id='form_lat']\").val(lat);
-                                    $(\"input[id='form_long']\").val(long);
-                                });
-
-                                // suppress form submit on enter
-                                input.keypress(function (event) {
-                                    if (event.keyCode === 13) {
-                                        return false;
-                                    }
-                                });
-                            });
-                        ")
                     )),
                     form_submit('submit', _("Save"))
                 ))
